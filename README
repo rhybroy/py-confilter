@@ -1,0 +1,87 @@
+Author: TroyCheng
+Email: frostmourn716@gmail.com
+
+1. Introuction:
+
+    Confilter is a keyword matching service module based on gevent and
+    ahocorasick. It receives text content from http post request and matching with
+    keywords list in dictionaries, return a json format result which contains the
+    hit words.
+
+    For example:
+
+    Http post request body:
+        # g: dict group name, here is 'FORBID', it contains two dictionaries:
+        #    forbin & anti_forbid
+        # t: content need to be filtered, here is '法轮功(falungong) is forbidden in China'
+        g=FORBID&t=%E6%B3%95%E8%BD%AE%E5%A4%A7%E6%B3%95falun%20is%20forbidden%20in%20China
+
+    Http reaponse body:
+        # it means hit two words in forbid dict: 法轮 & falun, hit no words in
+        # anti_forbid dict.
+        {"forbid": ["\u6cd5\u8f6e", "falun"], "anti_forbid": []}
+
+    The dictionaries are located in confilter/data, 1 keyword per line. In
+    this example, there are two dictionaries: forbid and anti_forbid, belongs to
+    FORBID group. User can define different dictionaries and groups for
+    different purposes.
+
+2. Installation:
+    
+    Confilter is depend on gevent and ahocorasick, they should be installed at
+    first:
+        gevent: http://www.gevent.org/
+        ahocorasick: https://hkn.eecs.berkeley.edu/~dyoo/python/ahocorasick/
+    Then, just using commands bellow to make it work:
+        tar zxvf confilter.tar.gz
+        cd confilter
+        sudo python ./bin/confilterd.py start|stop|restart
+    
+3. Configuration:
+
+    A typical configuration file is looked like this:
+        # confilter.cfg
+        # define common information
+        [info]
+        host = 127.0.0.1
+        port = 9000
+        poolSize = 3000
+
+        [dict_groups]
+        keys = FORBID
+
+        [dict_group_FORBID]
+        forbid = "../data/forbid.dict"
+        anti_forbid = "../data/anti_forbid.dict"
+
+    In 'info' section, you can defined the bind address and the port, and the
+    poolSize, which is used in gevent.WSGIServer.
+
+    In 'dict_groups' section, you can add your own dictionary group name,
+    using ',' as separator, like: keys=FORBID,YOUR_GROUP,THIRD_GROUP, And
+    then, provide the dictionary name and path in 'dict_group_GROUPNAME'
+    section. the 'dict_group_' is a prefix and the GROUPNAME is the one you
+    specified in keys of dic_groups section. For example:
+        
+        [dict_groups]
+        keys = custom1, CUSTOM2
+
+        [dict_group_custom1]
+        dict1 = '../data/dict1.dict'
+
+        [dict_group_CUSTOM2]
+        dict1 = '../data/dict1.dict'
+        dict2 = '../data/dict2.dict'
+
+    logger.cfg is the configuration file for logger, you can refer to python 
+    logging module if you want to modify it.
+
+4. Advanced:
+
+    Confilter run as a daemon process. Using gevent.WSGIServer as default
+    server. Also you can use gunicorn to instead. just using:
+    
+        cd confilter/bin
+        gunicorn --workers=4 confilter:confilterApp
+
+    You can refer to gunicorn: http://gunicorn.org/ for more information.
